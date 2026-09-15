@@ -10,6 +10,9 @@ rem     "%BINARY_NAME%.sha256" next to the binary).
 rem   - Binary cached in %%LOCALAPPDATA%%\asset-collector; outputs land there (visible),
 rem     no more %%TEMP%% litter.
 rem   - Exit code propagated. NOTE: keep URL list identical to run_asset_collector.ps1/.sh.
+rem   - SMART data / serial numbers need administrator rights, so the runner asks for them
+rem     by default (UAC) and elevates ONLY the already-verified binary.  A declined prompt
+rem     falls back to an un-elevated run.  ASSET_DEPLOY_ELEVATE=0 turns the request off.
 
 set "DEFAULT_RAW_BASE_URL=https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/windows"
 set "DEFAULT_GH_PROXY_ORG_BASE_URL=https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/windows"
@@ -105,8 +108,44 @@ echo SHA256 verified ^(%EXPECTED_SRC%^).
 echo Working directory: %BASE_DIR%
 echo Starting IP Collector...
 pushd "%BASE_DIR%"
+
+rem ---- Elevation: SMART data / serial numbers need administrator rights (see README) ----
+rem Only the verified binary is elevated; this script stays user-level, so the download +
+rem verify above never holds the privilege.  ASSET_DEPLOY_ELEVATE=0 opts out; a declined
+rem UAC prompt falls back to an un-elevated run.
+rem
+rem The child's exit code comes back on stdout, not as our exit code: "if errorlevel N"
+rem tests ">= N", so a crashed child (e.g. 0xC0000005) would look like a sentinel value.
+set "ELEVATE=%ASSET_DEPLOY_ELEVATE%"
+if not defined ELEVATE set "ELEVATE=1"
+if /I "%ELEVATE%"=="0"     set "ELEVATE=0"
+if /I "%ELEVATE%"=="false" set "ELEVATE=0"
+if /I "%ELEVATE%"=="no"    set "ELEVATE=0"
+if not "%ELEVATE%"=="1" goto :run_binary
+net session >nul 2>&1
+if not errorlevel 1 goto :run_binary
+
+echo Requesting administrator rights for SMART/serial collection...
+set "ASSET_DEPLOY_CHILD_EXE=%BINARY_PATH%"
+set "ASSET_DEPLOY_CHILD_ARGS=%*"
+set "ELRC="
+for /f "usebackq delims=" %%R in (`powershell -NoProfile -Command "$exe = $env:ASSET_DEPLOY_CHILD_EXE; $a = $env:ASSET_DEPLOY_CHILD_ARGS; try { if ($a) { $p = Start-Process -FilePath $exe -ArgumentList $a -Verb RunAs -Wait -PassThru } else { $p = Start-Process -FilePath $exe -Verb RunAs -Wait -PassThru }; Write-Output $p.ExitCode } catch { Write-Output 'DECLINED' }"`) do set "ELRC=%%R"
+set "ASSET_DEPLOY_CHILD_EXE="
+set "ASSET_DEPLOY_CHILD_ARGS="
+if /I "%ELRC%"=="DECLINED" goto :elevate_declined
+if not defined ELRC goto :elevate_declined
+set "RC=%ELRC%"
+goto :finish
+
+:elevate_declined
+echo Elevation declined; continuing without it - SMART/serial fields will be empty.
+echo Set ASSET_DEPLOY_ELEVATE=0 to silence this.
+
+:run_binary
 "%BINARY_PATH%" %*
 set "RC=%ERRORLEVEL%"
+
+:finish
 popd
 exit /b %RC%
 

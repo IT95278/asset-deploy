@@ -20,6 +20,35 @@ asset-collector 一键部署工具
 
 脚本产物统一落地在 `%LOCALAPPDATA%\asset-collector`（Windows）/ `~/.cache/asset-collector`（Linux），不再散落 `%TEMP%`；采集输出的 XML/DB 也在这里。
 
+## 权限（管理员 / root）
+
+**SMART 属性、健康度、部分序列号需要管理员权限才能读取**（`IOCTL_ATA_PASS_THROUGH` 等接口的访问控制），
+非提权运行这些字段会留空 —— 脚本和采集器自己都会给出提示。
+
+因此三个脚本**默认请求提权**：Windows 弹 UAC，Linux 走 `sudo`。设计上只提权**那个已通过 SHA256 校验的二进制**，
+脚本本身（下载 + 校验）始终以普通权限运行，不用管理员权限去碰网络。
+
+| 平台 | 行为 |
+|---|---|
+| Windows（bat / ps1） | 已在管理员会话中则直接用；否则 `Start-Process -Verb RunAs` 提权运行二进制，子进程退出码回传给调用方 |
+| Linux（sh） | 已是 root 则直接用；否则 `sudo -E` 运行二进制（`-E` 保留 `HOME`，缓存与输出仍在调用者的家目录）。管道执行时 `sudo` 的密码从 `/dev/tty` 读取，不会被管道吃掉 |
+
+**被拒绝或不可用时不会失败**：UAC 被拒、`sudo` 需要密码但没有终端、系统里没有 `sudo` —— 都会打印原因并
+**降级为普通权限继续采集**（只是 SMART 字段为空）。
+
+关闭自动提权：
+
+```powershell
+$env:ASSET_DEPLOY_ELEVATE = "0"
+```
+```bash
+export ASSET_DEPLOY_ELEVATE=0
+```
+
+> 权衡说明：默认提权等于去掉了"每一步都由人确认"这道闸门 —— 脚本下载并校验过的二进制会直接以管理员身份运行。
+> 校验是 fail-closed 的，但哈希与二进制来自同一台服务器，除非用 `ASSET_DEPLOY_SHA256` 固定哈希。
+> 想保留人工闸门就设 `ASSET_DEPLOY_ELEVATE=0`，再自行以管理员身份启动。
+
 ## 使用方式
 
 **Windows (PowerShell - 推荐):**

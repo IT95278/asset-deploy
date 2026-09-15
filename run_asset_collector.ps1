@@ -7,6 +7,9 @@
 #   - Binary is cached under %LOCALAPPDATA%\asset-collector and outputs land in the
 #     same folder (visible), instead of littering %TEMP%.
 #   - Exit code of asset-collector is propagated ($LASTEXITCODE).
+#   - SMART data / serial numbers need administrator rights, so the runner asks for them
+#     by default (UAC) and elevates ONLY the already-verified binary.  A declined prompt
+#     falls back to an un-elevated run.  ASSET_DEPLOY_ELEVATE=0 turns the request off.
 
 $ErrorActionPreference = "Stop"
 
@@ -153,6 +156,32 @@ Write-Host "Working directory: $baseDir"
 Write-Host "Starting IP Collector..." -ForegroundColor Green
 Push-Location $baseDir
 try {
+    # ---- Elevation: SMART data / serial numbers need administrator rights (see README) ----
+    # Only the verified binary is elevated; the download + verify above stays user-level,
+    # so that step never holds the privilege.  ASSET_DEPLOY_ELEVATE=0 opts out; a declined
+    # UAC prompt falls back to an un-elevated run.
+    $elevateWanted = $env:ASSET_DEPLOY_ELEVATE -notmatch '^(?i:0|false|no)$'
+    $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if ($elevateWanted -and -not $isAdmin) {
+        Write-Host "Requesting administrator rights for SMART/serial collection (approve the UAC prompt)..." -ForegroundColor Yellow
+        try {
+            # NOTE: "$args" must NOT be written as "@args" here: the @ form is array
+            # splatting, which hands the elements to Start-Process as ITS parameters and
+            # fails with "cannot find a parameter matching '-no-db'".  Each argument is
+            # quoted so paths containing spaces survive the round trip.
+            $childArgs = (@($args) | ForEach-Object { '"' + $_ + '"' }) -join ' '
+            if ($childArgs) {
+                $elevated = Start-Process -FilePath $binaryPath -ArgumentList $childArgs -Verb RunAs -Wait -PassThru
+            } else {
+                $elevated = Start-Process -FilePath $binaryPath -Verb RunAs -Wait -PassThru
+            }
+            exit $elevated.ExitCode
+        } catch {
+            Write-Host "Elevation declined or unavailable; continuing without it." -ForegroundColor Yellow
+            Write-Host "  reason: $($_.Exception.Message)" -ForegroundColor DarkGray
+            Write-Host "SMART/serial fields will be empty.  Set ASSET_DEPLOY_ELEVATE=0 to silence this." -ForegroundColor Yellow
+        }
+    }
     & $binaryPath @args
     exit $LASTEXITCODE
 } finally {

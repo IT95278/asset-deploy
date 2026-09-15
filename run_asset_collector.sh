@@ -10,6 +10,9 @@ echo -e "\033[36mIP Collector - One-Click Runner\033[0m"
 #     ASSET_DEPLOY_SHA256, or publish "<binary>.sha256" next to the binary).
 #   - Binary cached in ~/.cache/asset-collector; outputs land there (visible), no /tmp litter.
 #   - Exit code propagated via exec. Minimum-size gate on downloads (W2-09).
+#   - SMART data / serial numbers need root, so the runner asks for it by default (sudo)
+#     and elevates ONLY the already-verified binary.  A refused or unavailable sudo falls
+#     back to a rootless run.  ASSET_DEPLOY_ELEVATE=0 turns the request off.
 # NOTE: keep the URL list identical to run_asset_collector.bat / run_asset_collector.ps1.
 
 DEFAULT_RAW_BASE_URL="https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/linux"
@@ -148,4 +151,27 @@ chmod +x "$BINARY_PATH"
 echo "Working directory: $BASE_DIR"
 echo -e "\033[32mStarting IP Collector...\033[0m"
 cd "$BASE_DIR"
+
+# ---- Elevation: SMART data / serial numbers need root (see README) ----
+# Only the already-verified binary is elevated; this script stays user-level, so the
+# download + verify step above never holds the privilege.  ASSET_DEPLOY_ELEVATE=0 opts
+# out; a refused or unavailable sudo falls back to an un-elevated run.
+ELEVATE="$(echo "${ASSET_DEPLOY_ELEVATE:-1}" | tr '[:upper:]' '[:lower:]')"
+if [ "$ELEVATE" != "0" ] && [ "$ELEVATE" != "false" ] && [ "$ELEVATE" != "no" ] && [ "$(id -u)" -ne 0 ]; then
+    if command -v sudo >/dev/null 2>&1; then
+        echo "Requesting root for SMART/serial collection (sudo)..."
+        # stdin may be the script itself ("curl | bash"), so let sudo read the password
+        # from the terminal.  -E keeps HOME, so the cache dir stays the invoking user's.
+        if sudo -n true 2>/dev/null; then
+            exec sudo -E "./$BINARY_NAME" "$@"
+        elif [ -r /dev/tty ]; then
+            exec sudo -E "./$BINARY_NAME" "$@" </dev/tty
+        fi
+        echo "sudo needs a password but no terminal is available; continuing without root."
+    else
+        echo "sudo not found; continuing without root."
+    fi
+    echo "SMART/serial fields will be empty.  Set ASSET_DEPLOY_ELEVATE=0 to silence this."
+fi
+
 exec "./$BINARY_NAME" "$@"
