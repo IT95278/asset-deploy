@@ -12,11 +12,11 @@ echo -e "\033[36mIP Collector - One-Click Runner\033[0m"
 #   - Exit code propagated via exec. Minimum-size gate on downloads (W2-09).
 # NOTE: keep the URL list identical to run_asset_collector.bat / run_asset_collector.ps1.
 
-DEFAULT_RAW_BASE_URL="https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/linux"
-DEFAULT_GH_PROXY_ORG_BASE_URL="https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/linux"
-DEFAULT_CDN_GH_PROXY_BASE_URL="https://cdn.gh-proxy.org/https://github.com/laohuyou886/asset-deploy/raw/main/bin/linux"
-DEFAULT_HK_GH_PROXY_BASE_URL="https://hk.gh-proxy.org/https://github.com/laohuyou886/asset-deploy/raw/main/bin/linux"
-DEFAULT_CDN_BASE_URL="https://cdn.jsdelivr.net/gh/laohuyou886/asset-deploy@main/bin/linux"
+DEFAULT_RAW_BASE_URL="https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/linux"
+DEFAULT_GH_PROXY_ORG_BASE_URL="https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/linux"
+DEFAULT_CDN_GH_PROXY_BASE_URL="https://cdn.gh-proxy.org/https://github.com/IT95278/asset-deploy/raw/main/bin/linux"
+DEFAULT_HK_GH_PROXY_BASE_URL="https://hk.gh-proxy.org/https://github.com/IT95278/asset-deploy/raw/main/bin/linux"
+DEFAULT_CDN_BASE_URL="https://cdn.jsdelivr.net/gh/IT95278/asset-deploy@main/bin/linux"
 DEFAULT_GHPROXY_BASE_URL="https://ghproxy.com/${DEFAULT_RAW_BASE_URL}"
 
 if [ -n "${ASSET_DEPLOY_RELEASE_URL:-}" ]; then

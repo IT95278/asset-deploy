@@ -14,11 +14,11 @@ Write-Host "IP Collector - One-Click Runner" -ForegroundColor Cyan
 
 $explicitBaseUrl = $env:ASSET_DEPLOY_RELEASE_URL
 # NOTE: keep the URL list identical to run_asset_collector.bat / run_asset_collector.sh.
-$defaultRawBaseUrl = "https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/windows"
-$defaultGhProxyOrgBaseUrl = "https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/windows"
-$defaultCdnGhProxyBaseUrl = "https://cdn.gh-proxy.org/https://github.com/laohuyou886/asset-deploy/raw/main/bin/windows"
-$defaultHkGhProxyBaseUrl = "https://hk.gh-proxy.org/https://github.com/laohuyou886/asset-deploy/raw/main/bin/windows"
-$defaultCdnBaseUrl = "https://cdn.jsdelivr.net/gh/laohuyou886/asset-deploy@main/bin/windows"
+$defaultRawBaseUrl = "https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/windows"
+$defaultGhProxyOrgBaseUrl = "https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/windows"
+$defaultCdnGhProxyBaseUrl = "https://cdn.gh-proxy.org/https://github.com/IT95278/asset-deploy/raw/main/bin/windows"
+$defaultHkGhProxyBaseUrl = "https://hk.gh-proxy.org/https://github.com/IT95278/asset-deploy/raw/main/bin/windows"
+$defaultCdnBaseUrl = "https://cdn.jsdelivr.net/gh/IT95278/asset-deploy@main/bin/windows"
 $defaultGhProxyBaseUrl = "https://ghproxy.com/$defaultRawBaseUrl"
 
 $baseUrls = @()

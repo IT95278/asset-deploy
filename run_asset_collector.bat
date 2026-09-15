@@ -11,12 +11,12 @@ rem   - Binary cached in %%LOCALAPPDATA%%\asset-collector; outputs land there (v
 rem     no more %%TEMP%% litter.
 rem   - Exit code propagated. NOTE: keep URL list identical to run_asset_collector.ps1/.sh.
 
-set "DEFAULT_RAW_BASE_URL=https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/windows"
-set "DEFAULT_GH_PROXY_ORG_BASE_URL=https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/windows"
-set "DEFAULT_CDN_GH_PROXY_BASE_URL=https://cdn.gh-proxy.org/https://github.com/laohuyou886/asset-deploy/raw/main/bin/windows"
-set "DEFAULT_HK_GH_PROXY_BASE_URL=https://hk.gh-proxy.org/https://github.com/laohuyou886/asset-deploy/raw/main/bin/windows"
-set "DEFAULT_CDN_BASE_URL=https://cdn.jsdelivr.net/gh/laohuyou886/asset-deploy@main/bin/windows"
-set "DEFAULT_GHPROXY_BASE_URL=https://ghproxy.com/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/windows"
+set "DEFAULT_RAW_BASE_URL=https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/windows"
+set "DEFAULT_GH_PROXY_ORG_BASE_URL=https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/windows"
+set "DEFAULT_CDN_GH_PROXY_BASE_URL=https://cdn.gh-proxy.org/https://github.com/IT95278/asset-deploy/raw/main/bin/windows"
+set "DEFAULT_HK_GH_PROXY_BASE_URL=https://hk.gh-proxy.org/https://github.com/IT95278/asset-deploy/raw/main/bin/windows"
+set "DEFAULT_CDN_BASE_URL=https://cdn.jsdelivr.net/gh/IT95278/asset-deploy@main/bin/windows"
+set "DEFAULT_GHPROXY_BASE_URL=https://ghproxy.com/https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/windows"
 
 set "BASE_URL_LIST="
 if "%ASSET_DEPLOY_RELEASE_URL%"=="" (

@@ -24,12 +24,12 @@ asset-collector 一键部署工具
 
 **Windows (PowerShell - 推荐):**
 ```powershell
-$tmp = Join-Path $env:TEMP "run_asset_collector.ps1"; irm https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.ps1 -OutFile $tmp; & $tmp
+$tmp = Join-Path $env:TEMP "run_asset_collector.ps1"; irm https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.ps1 -OutFile $tmp; & $tmp
 ```
 
 **Windows (批处理 - 兼容老系统):**
 ```batch
-curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.bat -o %TEMP%\run_asset_collector.bat && %TEMP%\run_asset_collector.bat
+curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.bat -o %TEMP%\run_asset_collector.bat && %TEMP%\run_asset_collector.bat
 ```
 
 > 说明：上面是**原始模式**（每次都会重新下载启动脚本，保证拿到最新版本）。
@@ -37,27 +37,27 @@ curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/as
 
 **Linux (Bash):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.sh | bash
+curl -fsSL https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.sh | bash
 ```
 
 ## 自定义下载地址
 
 **Windows (PowerShell):**
 ```powershell
-$env:ASSET_DEPLOY_RELEASE_URL = "https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/windows"
-irm https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.ps1 | iex
+$env:ASSET_DEPLOY_RELEASE_URL = "https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/windows"
+irm https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.ps1 | iex
 ```
 
 **Windows (批处理):**
 ```batch
-set ASSET_DEPLOY_RELEASE_URL=https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/windows
-curl -fsSL https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.bat -o %TEMP%\run_asset_collector.bat && %TEMP%\run_asset_collector.bat
+set ASSET_DEPLOY_RELEASE_URL=https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/windows
+curl -fsSL https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.bat -o %TEMP%\run_asset_collector.bat && %TEMP%\run_asset_collector.bat
 ```
 
 **Linux (Bash):**
 ```bash
-export ASSET_DEPLOY_RELEASE_URL="https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/linux"
-curl -fsSL https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.sh | bash
+export ASSET_DEPLOY_RELEASE_URL="https://raw.githubusercontent.com/IT95278/asset-deploy/main/bin/linux"
+curl -fsSL https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.sh | bash
 ```
 
 ## CDN/镜像加速下载（推荐）
@@ -69,19 +69,19 @@ curl -fsSL https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_a
 **Windows (PowerShell):**
 ```powershell
 $env:ASSET_DEPLOY_USE_CDN = "0"
-irm https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.ps1 | iex
+irm https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.ps1 | iex
 ```
 
 **Windows (BAT):**
 ```batch
 set ASSET_DEPLOY_USE_CDN=0
-curl -fsSL https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.bat -o %TEMP%\run_asset_collector.bat && %TEMP%\run_asset_collector.bat
+curl -fsSL https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.bat -o %TEMP%\run_asset_collector.bat && %TEMP%\run_asset_collector.bat
 ```
 
 **Linux (Bash):**
 ```bash
 export ASSET_DEPLOY_USE_CDN=0
-curl -fsSL https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.sh | bash
+curl -fsSL https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.sh | bash
 ```
 
 ## 优势
@@ -108,12 +108,12 @@ curl -fsSL https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_a
 
 **PowerShell:**
 ```powershell
-$tmp = Join-Path $env:TEMP "run_asset_collector.ps1"; irm https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.ps1 -OutFile $tmp; & $tmp --upload http://127.0.0.1:8080/upload
+$tmp = Join-Path $env:TEMP "run_asset_collector.ps1"; irm https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.ps1 -OutFile $tmp; & $tmp --upload http://127.0.0.1:8080/upload
 ```
 
 **BAT:**
 ```batch
-curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.bat -o %TEMP%\run_asset_collector.bat && %TEMP%\run_asset_collector.bat --upload http://127.0.0.1:8080/upload
+curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.bat -o %TEMP%\run_asset_collector.bat && %TEMP%\run_asset_collector.bat --upload http://127.0.0.1:8080/upload
 ```
 
 **Bash:**
@@ -132,12 +132,12 @@ curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/as
 
 ```bash
 # Linux 客户端；注意 `bash -s -- --upload` 里的 `--` 不能省略，否则报 bash: --: invalid option
-curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.sh | bash -s -- --upload http://<server-ip>:8080/upload
+curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.sh | bash -s -- --upload http://<server-ip>:8080/upload
 ```
 
 ```powershell
 # Windows 客户端（快速模式跳过登记）
-$tmp = Join-Path $env:TEMP "run_asset_collector.ps1"; irm https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/run_asset_collector.ps1 -OutFile $tmp; & $tmp --quick --upload http://<server-ip>:8080/upload
+$tmp = Join-Path $env:TEMP "run_asset_collector.ps1"; irm https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.ps1 -OutFile $tmp; & $tmp --quick --upload http://<server-ip>:8080/upload
 ```
 
 若服务端启用了 `ASSET_TAKEN_KEY`，客户端需先设置同名环境变量再执行上述命令。
