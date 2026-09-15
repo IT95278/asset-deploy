@@ -1,0 +1,13 @@
+# Line endings are contractual for the distributed scripts:
+#   - .sh must be LF everywhere.  Git for Windows defaults to core.autocrlf=true, which
+#     would rewrite a cloned copy to CRLF; every shell variable would then carry a
+#     trailing CR and the script dies on Linux with "No such file or directory".
+#   - .bat must stay byte-identical to the committed CRLF form.  The documented usage
+#     downloads it straight from the raw URL into cmd.exe, so the stored blob itself has
+#     to carry CRLF -- normalizing it to LF on commit ships a broken batch file (cmd.exe
+#     mis-parses LF-only labels and blocks).
+#   - .sha256 files must stay byte-exact, so the published digest keeps matching the
+#     binary it names.
+*.sh     text eol=lf
+*.bat    -text
+*.sha256 -text
