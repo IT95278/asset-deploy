@@ -62,6 +62,8 @@ if not defined EXPECTED_SHA (
     echo   - publish %BINARY_NAME%.sha256 ^(sha256sum format^) next to the binary, or
     echo   - set ASSET_DEPLOY_SHA256=^<hash^>, or
     echo   - set ASSET_DEPLOY_ALLOW_UNVERIFIED=1 to accept an unverified binary explicitly.
+    echo   - HTTP 404 below means the path/branch is wrong, or the mirror has no content on that branch yet.
+    for %%B in (%BASE_URL_LIST%) do call :probe_hash_url "%%B"
     exit /b 2
 )
 set "EXPECTED_SRC=published .sha256"
@@ -85,6 +87,14 @@ if defined EXPECTED_SHA if exist "%BINARY_PATH%" (
 if defined EXPECTED_SHA if defined ACTUAL_SHA if /I "%ACTUAL_SHA%"=="%EXPECTED_SHA%" (
     echo Cached binary matches expected SHA256; skipping download.
     goto :run
+)
+rem The published digest is the version oracle: a different local hash means the cached
+rem copy is not the published build (older, or built with other flags), so this is an
+rem update rather than a repair.  Print both short hashes so the transition is visible.
+if defined EXPECTED_SHA if defined ACTUAL_SHA (
+    echo Cached binary differs from the published build; re-downloading.
+    echo   local : %ACTUAL_SHA:~0,16%...
+    echo   remote: %EXPECTED_SHA:~0,16%...  ^(%EXPECTED_SRC%^)
 )
 
 echo Downloading %BINARY_NAME%...
@@ -160,6 +170,19 @@ for /f "usebackq tokens=1" %%H in ("%HASH_FILE%") do (
     if not defined EXPECTED_SHA set "EXPECTED_SHA=%%H"
 )
 del "%HASH_FILE%" 2>nul
+exit /b 0
+
+:probe_hash_url
+rem Only reached from the refusal path: report WHY the hash could not be fetched, so a
+rem bare "no SHA256" does not hide a wrong URL / an empty mirror (HTTP 404).
+set "CODE="
+for /f "usebackq delims=" %%C in (`curl -sSL --connect-timeout 8 -o NUL -w "%%{http_code}" "%~1/%BINARY_NAME%.sha256" 2^>nul`) do set "CODE=%%C"
+if not defined CODE set "CODE=000"
+if "%CODE%"=="404" (
+    echo   - %~1/%BINARY_NAME%.sha256 -^> HTTP 404: path/branch wrong, or the mirror has no content on this branch yet
+) else (
+    echo   - %~1/%BINARY_NAME%.sha256 -^> HTTP %CODE%
+)
 exit /b 0
 
 :download_from_list

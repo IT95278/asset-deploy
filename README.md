@@ -129,6 +129,37 @@ curl -fsSL https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset
 当你需要更新客户端版本时，按以下顺序操作：
 
 1. 在 `asset-collector` 仓库完成构建（见 [../asset-collector/docs/BUILD.md](../asset-collector/docs/BUILD.md)，含复制到本仓库 bin/ 的完整命令）。
+2. **重新生成同名的 `.sha256`**（这一步是发布的一部分，不是可选项）：
+
+```powershell
+# Windows（PowerShell）
+$h = (Get-FileHash -Algorithm SHA256 "bin\windows\asset-collector.exe").Hash.ToLower()
+Set-Content -NoNewline -Encoding ascii "bin\windows\asset-collector.exe.sha256" "$h  asset-collector.exe`n"
+```
+
+```bash
+# Linux / WSL（注意 sha256sum 默认带 `*`，格式必须是两个空格 + 纯文件名）
+( cd bin/linux && printf '%s  asset-collector\n' "$(sha256sum asset-collector | cut -d' ' -f1)" > asset-collector.sha256 )
+```
+
+3. 自检（两条都要 PASS）：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ..\scripts\build_all.ps1   # 第 8 节 published binaries vs .sha256
+```
+
+### 为什么必须重生成哈希
+
+客户端判断"要不要更新"的依据就是**发布的 `.sha256`**（不是版本号）：本地二进制哈希与它一致 → 跳过下载；不一致 → 重新下载并校验。所以哈希一旦与二进制脱节：
+
+| 情况 | 客户端表现 |
+|---|---|
+| 换了二进制、`.sha256` 没换（还是旧哈希） | 已装机器本地哈希与旧哈希一致 → **永远跳过下载，静默停在旧版本**；新机器下载后校验失败 → `SECURITY REFUSAL` 退出 |
+| `.sha256` 换了、二进制没换 | 所有机器每次运行都重下一遍（约 7 MB），校验总能过 |
+
+两种都不报服务端错误，只在终端上表现，所以"改二进制必改哈希"必须当成同一步操作。
+
+> 取不到哈希时脚本会打印每个下载地址的 HTTP 状态码（404 单独给解释），便于区分"没发布哈希"和"地址/分支写错"。
 
 ## 参数透传（已支持）
 

@@ -60,6 +60,7 @@ function Get-ExpectedSha256 {
     }
 
     # 2) Published "<binary>.sha256" next to the binary (sha256sum format: "<hash>  <name>").
+    $probe = @()
     foreach ($baseUrl in $baseUrls) {
         $hashUrl = "$baseUrl/$binaryName.sha256"
         try {
@@ -77,8 +78,17 @@ function Get-ExpectedSha256 {
                 return @{ Hash = $firstToken; Source = $hashUrl }
             }
         } catch {
-            # No hash published at this mirror; try the next one.
+            # No hash published at this mirror; try the next one.  Keep the HTTP status so
+            # the refusal below can separate "hash not published" from "wrong URL".
+            $code = "unreachable"
+            $resp = $_.Exception.Response
+            if ($resp -and $resp.StatusCode) { $code = [int]$resp.StatusCode }
+            $probe += "$hashUrl -> HTTP $code"
         }
+    }
+    if ($probe.Count -gt 0) {
+        Write-Host "  - no hash retrieved; the mirror answered:" -ForegroundColor Yellow
+        foreach ($p in $probe) { Write-Host "      $p" -ForegroundColor DarkGray }
     }
     return $null
 }
@@ -94,6 +104,7 @@ if ($skipVerify) {
         Write-Host "  - publish $binaryName.sha256 (sha256sum format) next to the binary, or"
         Write-Host "  - set ASSET_DEPLOY_SHA256=<hash>, or"
         Write-Host "  - set ASSET_DEPLOY_ALLOW_UNVERIFIED=1 to accept an unverified binary explicitly."
+        Write-Host "  - HTTP 404 above means the path/branch is wrong, or the mirror has no content on that branch yet."
         exit 2
     }
     Write-Host "WARNING: ASSET_DEPLOY_ALLOW_UNVERIFIED=1 - SHA256 verification skipped." -ForegroundColor Yellow
@@ -106,7 +117,12 @@ if (-not $skipVerify -and (Test-Path $binaryPath)) {
         Write-Host "Cached binary matches expected SHA256; skipping download."
         $needDownload = $false
     } else {
-        Write-Host "Cached binary hash mismatch; re-downloading." -ForegroundColor Yellow
+        # The published digest is the version oracle: a different local hash means the
+        # cached copy is not the published build (older, or built with other flags), so
+        # this is an update rather than a repair.
+        Write-Host "Cached binary differs from the published build; re-downloading." -ForegroundColor Yellow
+        Write-Host "  local : $($actual.Substring(0,16))..."
+        Write-Host "  remote: $($expected.Hash.Substring(0,16))...  ($($expected.Source))"
     }
 }
 

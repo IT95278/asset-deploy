@@ -64,6 +64,20 @@ elif [ "${ASSET_DEPLOY_ALLOW_UNVERIFIED:-0}" != "1" ]; then
         echo "  - publish $BINARY_NAME.sha256 (sha256sum format) next to the binary, or"
         echo "  - set ASSET_DEPLOY_SHA256=<hash>, or"
         echo "  - set ASSET_DEPLOY_ALLOW_UNVERIFIED=1 to accept an unverified binary explicitly."
+        # Probe only on the failure path: "no hash" must not hide a wrong URL, or a
+        # mirror that has no content on this branch yet (HTTP 404).
+        for base in "${BASE_URLS[@]}"; do
+            # The fallback is an assignment, not part of the substitution: curl already
+            # prints 000 on a failed transfer, and appending another would yield "000000".
+            code="$(curl -sSL --connect-timeout 8 -o /dev/null -w '%{http_code}' \
+                "$base/$BINARY_NAME.sha256" 2>/dev/null)" || code="000"
+            [ -n "$code" ] || code="000"
+            if [ "$code" = "404" ]; then
+                echo "  - $base/$BINARY_NAME.sha256 -> HTTP 404: path/branch wrong, or the mirror has no content on this branch yet"
+            else
+                echo "  - $base/$BINARY_NAME.sha256 -> HTTP $code"
+            fi
+        done
         exit 2
     fi
     EXPECTED_SRC="published .sha256"
@@ -88,7 +102,12 @@ if [ -f "$BINARY_PATH" ] && [ -n "$EXPECTED_SHA" ]; then
         echo "Cached binary matches expected SHA256; skipping download."
         need_download=0
     else
-        echo "Cached binary hash mismatch; re-downloading."
+        # The published digest is the version oracle: a different local hash means the
+        # cached copy is not the published build (older, or built with other flags), so
+        # this is an update rather than a repair.
+        echo "Cached binary differs from the published build; re-downloading."
+        echo "  local : ${actual_sha:0:16}..."
+        echo "  remote: ${EXPECTED_SHA:0:16}...  ($EXPECTED_SRC)"
     fi
 fi
 
