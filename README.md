@@ -62,7 +62,7 @@ curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-
 ```
 
 > 说明：上面是**原始模式**（每次都会重新下载启动脚本，保证拿到最新版本）。
-> 默认不会上传到服务端；如需上传请追加参数：`--upload http://<server-ip>:8080/upload`。
+> 默认不会上传到服务端；如需上传请追加参数：`--upload http://<server-ip>:35500/upload`。
 
 **Linux (Bash):**
 ```bash
@@ -168,22 +168,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ..\scripts\build_all.ps1   #
 
 **PowerShell:**
 ```powershell
-$tmp = Join-Path $env:TEMP "run_asset_collector.ps1"; irm https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.ps1 -OutFile $tmp; & $tmp --upload http://127.0.0.1:8080/upload
+$tmp = Join-Path $env:TEMP "run_asset_collector.ps1"; irm https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.ps1 -OutFile $tmp; & $tmp --upload http://127.0.0.1:35500/upload
 ```
 
 **BAT:**
 ```batch
-curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.bat -o %TEMP%\run_asset_collector.bat && %TEMP%\run_asset_collector.bat --upload http://127.0.0.1:8080/upload
+curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.bat -o %TEMP%\run_asset_collector.bat && %TEMP%\run_asset_collector.bat --upload http://127.0.0.1:35500/upload
 ```
 
 **Bash:**
 ```bash
-./run_asset_collector.sh --upload http://127.0.0.1:8080/upload
+./run_asset_collector.sh --upload http://127.0.0.1:35500/upload
 ```
 
 > 不带 `--quick` 时为普通模式，会提示输入责任人/资产编号/备注（即登记信息）。
 
-默认建议先用 HTTP 本地联调：`http://<server-ip>:8080/upload`（`asset-ingest` 默认监听 8080）。
+默认建议先用 HTTP 本地联调：`http://<server-ip>:35500/upload`（`asset-ingest` 默认监听 35500）。
 若你改为自签名 HTTPS，客户端请设置 `ASSET_TLS_INSECURE=1` 或 `ASSET_TLS_CA_PATH`。
 
 ## 局域网联调（客户端指向你的机器）
@@ -192,16 +192,16 @@ curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-
 
 ```bash
 # Linux 客户端；注意 `bash -s -- --upload` 里的 `--` 不能省略，否则报 bash: --: invalid option
-curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.sh | bash -s -- --upload http://<server-ip>:8080/upload
+curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.sh | bash -s -- --upload http://<server-ip>:35500/upload
 ```
 
 ```powershell
 # Windows 客户端（快速模式跳过登记）
-$tmp = Join-Path $env:TEMP "run_asset_collector.ps1"; irm https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.ps1 -OutFile $tmp; & $tmp --quick --upload http://<server-ip>:8080/upload
+$tmp = Join-Path $env:TEMP "run_asset_collector.ps1"; irm https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.ps1 -OutFile $tmp; & $tmp --quick --upload http://<server-ip>:35500/upload
 ```
 
 若服务端启用了 `ASSET_TAKEN_KEY`，客户端需先设置同名环境变量再执行上述命令。
-Windows 客户端可先用浏览器打开 `http://<server-ip>:8080/` 确认连通。
+Windows 客户端可先用浏览器打开 `http://<server-ip>:35500/` 确认连通。
 
 ## Windows 脚本缓存模式（可选）
 
