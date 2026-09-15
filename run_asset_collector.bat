@@ -41,6 +41,9 @@ set "BINARY_NAME=asset-collector.exe"
 set "BASE_DIR=%LOCALAPPDATA%\asset-collector"
 set "BINARY_PATH=%BASE_DIR%\%BINARY_NAME%"
 set "HASH_FILE=%TEMP%\asset-collector.expected.sha256"
+rem Capture where the operator launched from before pushd switches away: a HWiNFO
+rem report exported there rides along with the upload (see the :run block).
+set "LAUNCH_DIR=%CD%"
 
 if not exist "%BASE_DIR%" mkdir "%BASE_DIR%"
 
@@ -115,6 +118,22 @@ if /I not "%ACTUAL_SHA%"=="%EXPECTED_SHA%" (
 echo SHA256 verified ^(%EXPECTED_SRC%^).
 
 :run
+rem ---- Main-report pickup: a HWiNFO XML exported into the launch directory rides along ----
+rem The collector searches its OUTPUT directory by default (= BASE_DIR below), not the
+rem folder the operator launched from, where a hand-exported report actually lies.
+rem This block only counts candidates; the collector still decides which one matches
+rem this machine (name must contain the computer name, newest wins).
+set "ATTACH_ARGS="
+set "ATTACH_FOUND=0"
+if /I not "%LAUNCH_DIR%"=="%BASE_DIR%" (
+    for %%F in ("%LAUNCH_DIR%\*.xml") do call :count_main_xml "%%~nxF"
+)
+if not "%ATTACH_FOUND%"=="0" (
+    set ATTACH_ARGS=--attach-dir "%LAUNCH_DIR%"
+    echo Found %ATTACH_FOUND% HWiNFO report^(s^) in the launch directory;
+    echo the one matching this machine will be uploaded with the scan ^(when --upload is active^).
+)
+
 echo Working directory: %BASE_DIR%
 echo Starting IP Collector...
 pushd "%BASE_DIR%"
@@ -137,7 +156,7 @@ if not errorlevel 1 goto :run_binary
 
 echo Requesting administrator rights for SMART/serial collection...
 set "ASSET_DEPLOY_CHILD_EXE=%BINARY_PATH%"
-set "ASSET_DEPLOY_CHILD_ARGS=%*"
+set "ASSET_DEPLOY_CHILD_ARGS=%ATTACH_ARGS% %*"
 set "ELRC="
 for /f "usebackq delims=" %%R in (`powershell -NoProfile -Command "$exe = $env:ASSET_DEPLOY_CHILD_EXE; $a = $env:ASSET_DEPLOY_CHILD_ARGS; try { if ($a) { $p = Start-Process -FilePath $exe -ArgumentList $a -Verb RunAs -Wait -PassThru } else { $p = Start-Process -FilePath $exe -Verb RunAs -Wait -PassThru }; Write-Output $p.ExitCode } catch { Write-Output 'DECLINED' }"`) do set "ELRC=%%R"
 set "ASSET_DEPLOY_CHILD_EXE="
@@ -152,12 +171,19 @@ echo Elevation declined; continuing without it - SMART/serial fields will be emp
 echo Set ASSET_DEPLOY_ELEVATE=0 to silence this.
 
 :run_binary
-"%BINARY_PATH%" %*
+"%BINARY_PATH%" %ATTACH_ARGS% %*
 set "RC=%ERRORLEVEL%"
 
 :finish
 popd
 exit /b %RC%
+
+:count_main_xml
+rem Counts a launch-directory *.xml that is not an asset-collector sidecar.
+set "CAND_NAME=%~1"
+if /I "%CAND_NAME:~-7%"=="-ip.xml" exit /b 0
+set /a ATTACH_FOUND+=1
+exit /b 0
 
 :try_hash_url
 rem Sets EXPECTED_SHA (parent scope) from "<url>/<binary>.sha256"; silent no-op on failure.

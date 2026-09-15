@@ -167,6 +167,21 @@ fi
 echo "Adding execute permission..."
 chmod +x "$BINARY_PATH"
 
+# ---- Main-report pickup: a HWiNFO XML exported into the launch directory rides along ----
+# The collector searches its OUTPUT directory by default (= BASE_DIR below), not the
+# folder the operator launched from, where a hand-exported report actually lies.
+# This block only counts candidates; the collector still decides which one matches
+# this machine (name must contain the computer name, newest wins).
+RUN_ARGS=("$@")
+LAUNCH_DIR="$PWD"
+if [ "$LAUNCH_DIR" != "$BASE_DIR" ]; then
+    attach_found=$(find "$LAUNCH_DIR" -maxdepth 1 -type f -iname '*.xml' ! -iname '*-ip.xml' 2>/dev/null | wc -l)
+    if [ "$attach_found" -gt 0 ]; then
+        RUN_ARGS+=(--attach-dir "$LAUNCH_DIR")
+        echo "Found $attach_found HWiNFO report file(s) in $LAUNCH_DIR; the one matching this machine will be uploaded with the scan (when --upload is active)."
+    fi
+fi
+
 echo "Working directory: $BASE_DIR"
 echo -e "\033[32mStarting IP Collector...\033[0m"
 cd "$BASE_DIR"
@@ -181,10 +196,11 @@ if [ "$ELEVATE" != "0" ] && [ "$ELEVATE" != "false" ] && [ "$ELEVATE" != "no" ] 
         echo "Requesting root for SMART/serial collection (sudo)..."
         # stdin may be the script itself ("curl | bash"), so let sudo read the password
         # from the terminal.  -E keeps HOME, so the cache dir stays the invoking user's.
+        # ${RUN_ARGS[@]+...} keeps "set -u" happy when the array is empty.
         if sudo -n true 2>/dev/null; then
-            exec sudo -E "./$BINARY_NAME" "$@"
+            exec sudo -E "./$BINARY_NAME" ${RUN_ARGS[@]+"${RUN_ARGS[@]}"}
         elif [ -r /dev/tty ]; then
-            exec sudo -E "./$BINARY_NAME" "$@" </dev/tty
+            exec sudo -E "./$BINARY_NAME" ${RUN_ARGS[@]+"${RUN_ARGS[@]}"} </dev/tty
         fi
         echo "sudo needs a password but no terminal is available; continuing without root."
     else
@@ -193,4 +209,4 @@ if [ "$ELEVATE" != "0" ] && [ "$ELEVATE" != "false" ] && [ "$ELEVATE" != "no" ] 
     echo "SMART/serial fields will be empty.  Set ASSET_DEPLOY_ELEVATE=0 to silence this."
 fi
 
-exec "./$BINARY_NAME" "$@"
+exec "./$BINARY_NAME" ${RUN_ARGS[@]+"${RUN_ARGS[@]}"}

@@ -64,6 +64,11 @@ curl -fsSL https://gh-proxy.org/https://raw.githubusercontent.com/IT95278/asset-
 > 说明：上面是**原始模式**（每次都会重新下载启动脚本，保证拿到最新版本）。
 > 默认不会上传到服务端；如需上传请追加 `--upload` 参数（见「参数透传」）。
 
+**带 HWiNFO 主报告一起上传**：先用 `HWiNFO64` 导出本机报告（`<计算机名>.XML`）到某个目录，
+**在那个目录里**打开终端再跑上面的命令——启动脚本会发现该目录的主报告并交给采集器，与本机名
+匹配的那份（新者优先）会在 `--upload` 激活时随 `-ip.xml` 一起上传。也可以显式传
+`--attach-dir <主报告所在目录>`。
+
 **Linux (Bash):**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/IT95278/asset-deploy/main/run_asset_collector.sh | bash

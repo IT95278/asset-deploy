@@ -168,6 +168,23 @@ if ($needDownload) {
     }
 }
 
+# ---- Main-report pickup: a HWiNFO XML exported into the launch directory rides along ----
+# The collector looks for the main report in its OUTPUT directory by default, which is
+# $baseDir below - not the folder the operator launched from, where a hand-exported
+# report actually lies.  This runner only detects candidates (*.xml, not a sidecar);
+# the collector still decides which one matches this machine (name must contain the
+# computer name, newest wins).
+$launchDir = (Get-Location).Path
+$attachArgs = @()
+if ($launchDir -and ($launchDir -ine $baseDir)) {
+    $reports = @(Get-ChildItem -LiteralPath $launchDir -Filter "*.xml" -File -ErrorAction SilentlyContinue |
+                 Where-Object { $_.Name -notlike "*-ip.xml" })
+    if ($reports.Count -gt 0) {
+        $attachArgs = @("--attach-dir", $launchDir)
+        Write-Host ("Found {0} HWiNFO report file(s) in {1}; the one matching this machine will be uploaded with the scan (when --upload is active)." -f $reports.Count, $launchDir)
+    }
+}
+
 Write-Host "Working directory: $baseDir"
 Write-Host "Starting IP Collector..." -ForegroundColor Green
 Push-Location $baseDir
@@ -185,7 +202,7 @@ try {
             # splatting, which hands the elements to Start-Process as ITS parameters and
             # fails with "cannot find a parameter matching '-no-db'".  Each argument is
             # quoted so paths containing spaces survive the round trip.
-            $childArgs = (@($args) | ForEach-Object { '"' + $_ + '"' }) -join ' '
+            $childArgs = (@($args) + @($attachArgs) | ForEach-Object { '"' + $_ + '"' }) -join ' '
             if ($childArgs) {
                 $elevated = Start-Process -FilePath $binaryPath -ArgumentList $childArgs -Verb RunAs -Wait -PassThru
             } else {
@@ -198,7 +215,7 @@ try {
             Write-Host "SMART/serial fields will be empty.  Set ASSET_DEPLOY_ELEVATE=0 to silence this." -ForegroundColor Yellow
         }
     }
-    & $binaryPath @args
+    & $binaryPath @args @attachArgs
     exit $LASTEXITCODE
 } finally {
     Pop-Location
