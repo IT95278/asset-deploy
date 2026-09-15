@@ -1,0 +1,15 @@
+# Temp
+*.log
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TLS material / local artifacts (audit WV-02, WS-01)
+build*/
+*.db
+*.pem
+*.pfx
+*.key
+pfx_password.txt

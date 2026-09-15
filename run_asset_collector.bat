@@ -1,0 +1,154 @@
+@echo off
+setlocal EnableExtensions
+chcp 65001 >nul
+echo IP Collector - One-Click Runner
+
+rem Standardized 2026-09-14 (audit DP-01/DP-02/DP-03/DP-06):
+rem   - SHA256 verification REQUIRED before execution (fail-closed; escape hatch:
+rem     ASSET_DEPLOY_ALLOW_UNVERIFIED=1, or pin ASSET_DEPLOY_SHA256, or publish
+rem     "%BINARY_NAME%.sha256" next to the binary).
+rem   - Binary cached in %%LOCALAPPDATA%%\asset-collector; outputs land there (visible),
+rem     no more %%TEMP%% litter.
+rem   - Exit code propagated. NOTE: keep URL list identical to run_asset_collector.ps1/.sh.
+
+set "DEFAULT_RAW_BASE_URL=https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/windows"
+set "DEFAULT_GH_PROXY_ORG_BASE_URL=https://gh-proxy.org/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/windows"
+set "DEFAULT_CDN_GH_PROXY_BASE_URL=https://cdn.gh-proxy.org/https://github.com/laohuyou886/asset-deploy/raw/main/bin/windows"
+set "DEFAULT_HK_GH_PROXY_BASE_URL=https://hk.gh-proxy.org/https://github.com/laohuyou886/asset-deploy/raw/main/bin/windows"
+set "DEFAULT_CDN_BASE_URL=https://cdn.jsdelivr.net/gh/laohuyou886/asset-deploy@main/bin/windows"
+set "DEFAULT_GHPROXY_BASE_URL=https://ghproxy.com/https://raw.githubusercontent.com/laohuyou886/asset-deploy/main/bin/windows"
+
+set "BASE_URL_LIST="
+if "%ASSET_DEPLOY_RELEASE_URL%"=="" (
+    if "%ASSET_DEPLOY_USE_CDN%"=="" set "ASSET_DEPLOY_USE_CDN=1"
+    if /I "%ASSET_DEPLOY_USE_CDN%"=="0" (
+        set "BASE_URL_LIST=%DEFAULT_GH_PROXY_ORG_BASE_URL% %DEFAULT_CDN_GH_PROXY_BASE_URL% %DEFAULT_HK_GH_PROXY_BASE_URL% %DEFAULT_RAW_BASE_URL% %DEFAULT_CDN_BASE_URL% %DEFAULT_GHPROXY_BASE_URL%"
+    ) else if /I "%ASSET_DEPLOY_USE_CDN%"=="false" (
+        set "BASE_URL_LIST=%DEFAULT_GH_PROXY_ORG_BASE_URL% %DEFAULT_CDN_GH_PROXY_BASE_URL% %DEFAULT_HK_GH_PROXY_BASE_URL% %DEFAULT_RAW_BASE_URL% %DEFAULT_CDN_BASE_URL% %DEFAULT_GHPROXY_BASE_URL%"
+    ) else if /I "%ASSET_DEPLOY_USE_CDN%"=="no" (
+        set "BASE_URL_LIST=%DEFAULT_GH_PROXY_ORG_BASE_URL% %DEFAULT_CDN_GH_PROXY_BASE_URL% %DEFAULT_HK_GH_PROXY_BASE_URL% %DEFAULT_RAW_BASE_URL% %DEFAULT_CDN_BASE_URL% %DEFAULT_GHPROXY_BASE_URL%"
+    ) else (
+        set "BASE_URL_LIST=%DEFAULT_GH_PROXY_ORG_BASE_URL% %DEFAULT_CDN_GH_PROXY_BASE_URL% %DEFAULT_HK_GH_PROXY_BASE_URL% %DEFAULT_CDN_BASE_URL% %DEFAULT_RAW_BASE_URL% %DEFAULT_GHPROXY_BASE_URL%"
+    )
+) else (
+    set "BASE_URL_LIST=%ASSET_DEPLOY_RELEASE_URL%"
+)
+
+set "BINARY_NAME=asset-collector.exe"
+set "BASE_DIR=%LOCALAPPDATA%\asset-collector"
+set "BINARY_PATH=%BASE_DIR%\%BINARY_NAME%"
+set "HASH_FILE=%TEMP%\asset-collector.expected.sha256"
+
+if not exist "%BASE_DIR%" mkdir "%BASE_DIR%"
+
+rem ---- Determine expected SHA256 (audit DP-01, fail-closed) ----
+set "EXPECTED_SHA="
+set "EXPECTED_SRC="
+if defined ASSET_DEPLOY_SHA256 (
+    set "EXPECTED_SHA=%ASSET_DEPLOY_SHA256%"
+    set "EXPECTED_SRC=ASSET_DEPLOY_SHA256"
+    goto :have_expected
+)
+if "%ASSET_DEPLOY_ALLOW_UNVERIFIED%"=="1" goto :have_expected
+for %%B in (%BASE_URL_LIST%) do (
+    if not defined EXPECTED_SHA call :try_hash_url "%%B"
+)
+if not defined EXPECTED_SHA (
+    echo.
+    echo SECURITY REFUSAL: no SHA256 available for %BINARY_NAME%.
+    echo   - publish %BINARY_NAME%.sha256 ^(sha256sum format^) next to the binary, or
+    echo   - set ASSET_DEPLOY_SHA256=^<hash^>, or
+    echo   - set ASSET_DEPLOY_ALLOW_UNVERIFIED=1 to accept an unverified binary explicitly.
+    exit /b 2
+)
+set "EXPECTED_SRC=published .sha256"
+:have_expected
+rem Audit W2-03: with ALLOW_UNVERIFIED=1 and no pinned/published hash, skip the two
+rem hash checks (cache-hit compare and post-download verify) but STILL download when
+rem the binary is missing — the previous attempt jumped straight to :run and then
+rem failed with "file not found" on a fresh machine.
+set "SKIP_VERIFY="
+if not defined EXPECTED_SHA (
+    set "SKIP_VERIFY=1"
+    echo WARNING: ASSET_DEPLOY_ALLOW_UNVERIFIED=1 - SHA256 verification skipped.
+)
+
+rem ---- Compute actual hash of cached binary, if present ----
+set "ACTUAL_SHA="
+if defined EXPECTED_SHA if exist "%BINARY_PATH%" (
+    for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -LiteralPath '%BINARY_PATH%' -Algorithm SHA256).Hash.ToLower()"`) do set "ACTUAL_SHA=%%H"
+)
+
+if defined EXPECTED_SHA if defined ACTUAL_SHA if /I "%ACTUAL_SHA%"=="%EXPECTED_SHA%" (
+    echo Cached binary matches expected SHA256; skipping download.
+    goto :run
+)
+
+echo Downloading %BINARY_NAME%...
+call :download_from_list
+if errorlevel 1 exit /b 1
+
+rem ---- Verify BEFORE executing (audit DP-01); skipped only by ALLOW_UNVERIFIED ----
+set "ACTUAL_SHA="
+if defined SKIP_VERIFY goto :run
+for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -LiteralPath '%BINARY_PATH%' -Algorithm SHA256).Hash.ToLower()"`) do set "ACTUAL_SHA=%%H"
+if /I not "%ACTUAL_SHA%"=="%EXPECTED_SHA%" (
+    echo SHA256 MISMATCH ^(source: %EXPECTED_SRC%^)
+    echo   expected: %EXPECTED_SHA%
+    echo   actual:   %ACTUAL_SHA%
+    del "%BINARY_PATH%" 2>nul
+    exit /b 2
+)
+echo SHA256 verified ^(%EXPECTED_SRC%^).
+
+:run
+echo Working directory: %BASE_DIR%
+echo Starting IP Collector...
+pushd "%BASE_DIR%"
+"%BINARY_PATH%" %*
+set "RC=%ERRORLEVEL%"
+popd
+exit /b %RC%
+
+:try_hash_url
+rem Sets EXPECTED_SHA (parent scope) from "<url>/<binary>.sha256"; silent no-op on failure.
+if defined EXPECTED_SHA exit /b 0
+echo   - Trying hash: %~1/%BINARY_NAME%.sha256
+curl -fsSL --connect-timeout 8 -o "%HASH_FILE%" "%~1/%BINARY_NAME%.sha256" 2>nul
+if not exist "%HASH_FILE%" exit /b 0
+rem usebackq + quoted path: read first token of the hash file.
+for /f "usebackq tokens=1" %%H in ("%HASH_FILE%") do (
+    if not defined EXPECTED_SHA set "EXPECTED_SHA=%%H"
+)
+del "%HASH_FILE%" 2>nul
+exit /b 0
+
+:download_from_list
+rem Audit DP-02: retry loop must NOT use goto inside the for-body; use a subroutine per URL.
+setlocal
+for %%B in (%BASE_URL_LIST%) do (
+    echo   - Trying: %%B/%BINARY_NAME%
+    call :try_one_url "%%B"
+    if not errorlevel 1 (
+        endlocal
+        exit /b 0
+    )
+)
+endlocal
+echo Download failed on all mirrors.
+exit /b 1
+
+:try_one_url
+setlocal
+set "URL=%~1"
+set "TRY=0"
+:retry_one
+set /a TRY+=1
+curl -fL -# --connect-timeout 8 --retry 2 --retry-delay 1 --speed-time 20 --speed-limit 10240 -o "%BINARY_PATH%" "%URL%/%BINARY_NAME%"
+if not errorlevel 1 exit /b 0
+if %TRY% lss 3 (
+    timeout /t 1 >nul
+    goto :retry_one
+)
+endlocal
+exit /b 1
