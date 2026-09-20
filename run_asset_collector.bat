@@ -44,6 +44,10 @@ set "HASH_FILE=%TEMP%\asset-collector.expected.sha256"
 rem Capture where the operator launched from before pushd switches away: a HWiNFO
 rem report exported there rides along with the upload (see the :run block).
 set "LAUNCH_DIR=%CD%"
+rem A drive-root path ("G:\") ends in a backslash; quoted into the collector's
+rem command line it reads \" as an escaped quote and --attach-dir arrives
+rem mangled, so no report gets attached.  "G:\." names the same folder.
+if "%LAUNCH_DIR:~-2%"==":\" set "LAUNCH_DIR=%LAUNCH_DIR%."
 
 if not exist "%BASE_DIR%" mkdir "%BASE_DIR%"
 

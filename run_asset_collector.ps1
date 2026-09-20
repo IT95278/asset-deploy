@@ -175,6 +175,10 @@ if ($needDownload) {
 # the collector still decides which one matches this machine (name must contain the
 # computer name, newest wins).
 $launchDir = (Get-Location).Path
+# A drive-root path ("G:\") ends in a backslash; quoted into the elevated child's
+# command line the collector reads \" as an escaped quote and --attach-dir arrives
+# mangled, so no report gets attached.  "G:\." names the same folder.
+if ($launchDir.EndsWith('')) { $launchDir = $launchDir + '.' }
 $attachArgs = @()
 if ($launchDir -and ($launchDir -ine $baseDir)) {
     $reports = @(Get-ChildItem -LiteralPath $launchDir -Filter "*.xml" -File -ErrorAction SilentlyContinue |
